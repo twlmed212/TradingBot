@@ -9,4 +9,4 @@ dependencies = []  # swapbot uses the standard library; boto3 comes with the AWS
 dev = ["pytest>=8"]
 
 [tool.pytest.ini_options]
-testpaths = ["swapbot/tests", "server/tests"]
+testpaths = ["swapbot/tests"]

@@ -10,7 +10,7 @@ __pycache__/
 
 # Node / builds
 node_modules/
-server/console/web/dist/
+dist/
 *.tsbuildinfo
 swapbot/build/
 
