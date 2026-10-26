@@ -1,0 +1,9 @@
+[Unit]
+Description=Run the H9 paper test every hour (2 minutes past)
+
+[Timer]
+OnCalendar=*-*-* *:02:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

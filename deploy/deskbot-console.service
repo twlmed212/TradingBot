@@ -1,0 +1,22 @@
+[Unit]
+Description=deskbot console (read-only dashboard API, localhost only)
+After=network-online.target
+
+[Service]
+Type=simple
+User=deskbot
+WorkingDirectory=/opt/deskbot
+Environment=DESKBOT_ROOT=/opt/deskbot
+Environment=DESKBOT_WEB_DIST=/opt/deskbot/console/web/dist
+# Bound to 127.0.0.1: reachable only through the Session Manager SSH tunnel, never from the internet.
+ExecStart=/opt/deskbot/venv/bin/uvicorn console.api.main:app --host 127.0.0.1 --port 8787 --log-level warning
+Restart=always
+RestartSec=5
+MemoryMax=256M
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

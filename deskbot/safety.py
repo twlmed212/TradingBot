@@ -13,7 +13,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-import httpx
+try:
+    import httpx
+except ImportError:
+    httpx = None
 
 from .config import RiskLimits, Token
 
@@ -38,9 +41,14 @@ class SafetyReport:
 
 
 class SolanaRpc:
-    def __init__(self, url: str, client: httpx.Client | None = None):
+    def __init__(self, url: str, client: Any = None):
         self.url = url
-        self.http = client or httpx.Client(timeout=10.0)
+        if client is None:
+            if httpx is None:
+                raise RuntimeError("httpx is required for live RPC calls: pip install httpx")
+            self.http = httpx.Client(timeout=10.0)
+        else:
+            self.http = client
 
     def _call(self, method: str, params: list[Any]) -> Any:
         r = self.http.post(

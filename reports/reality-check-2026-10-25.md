@@ -37,3 +37,33 @@ Any strategy whose cash leg sits idle has to beat this, not 0%.
 ## Sources
 
 Hyperliquid `info` API (`metaAndAssetCtxs`, `fundingHistory`, `candleSnapshot`); Binance futures `premiumIndex`, `fundingInfo`, `fundingRate`; Bybit v5 tickers; Orca `api.orca.so/v2/solana/pools`; DefiLlama `yields.llama.fi/pools`. LP simulation: [research/reality_check/lp_backtest.py](../research/reality_check/lp_backtest.py).
+
+## Addendum: Jupiter V2 execution costs vs SOL (live quotes, 25 Oct 2026)
+
+Quotes SOL→token and token→SOL; cost is 1 − (output USD / input USD) as valued by Jupiter. Per-side values carry Jupiter's own price-reference noise (some are negative), so the round trip is the reliable number.
+
+| Token | DEX liquidity | Round trip at $1k (bps) | Round trip at $10k (bps) |
+|---|---|---|---|
+| JUP | $5.2M | 13 | 17 |
+| PENGU | $2.5M | 22 | 25 |
+| TRUMP | $24.7M | 23 | 26 |
+| BONK | $6.0M | 25 | 22 |
+| ORCA | $0.3M | 25 | 45 |
+| RENDER | $0.2M | 26 | 41 |
+| RAY | $16.4M | 26 | 45 |
+| FARTCOIN | $5.5M | 26 | 29 |
+| POPCAT | $4.0M | 28 | 42 |
+| PYTH | $0.4M | 31 | 96 |
+| BOME | $13.2M | 31 | 49 |
+| PNUT | $3.0M | 33 | 49 |
+| JTO | $0.5M | 34 | 42 |
+| ACT | $0.7M | 39 | 104 |
+| W | $0.2M | 42 | 78 |
+| TNSR | $0.04M | 102 | 1,229 |
+| ME | $0.2M | 123 | 678 |
+| IO | $0.06M | 192 | 642 |
+| FIDA, GMT, LAYER | ~$0 | >200 | >1,900 |
+
+Jupiter's platform fee is 10 bps per side on these X/SOL swaps (0 on JUP), versus 2 bps on SOL/USDC, whose round trip is ~1–4 bps even at $100k. The forward recorder (`recorder/quote_recorder.py`, universe in `recorder/universe.json`) now records these pairs continuously.
+
+Pre-registered follow-ups run the same day: [H1 SOL/USDC trend](../research/registry/2026-10-25-trend-killtest.md) and [H2 ecosystem momentum vs SOL](../research/registry/2026-10-25-ecosystem-momentum-killtest.md), both failed.

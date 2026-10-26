@@ -1,6 +1,6 @@
 # Solana DEX AI trading bots
 
-> **Implementation update — 25 October 2026:** The build sequence in this research memo is superseded by the repository's [canonical implementation plan](../PLAN.md). The replacement plan is provider-neutral, starts with an empirically validated SOL/USDC strategy, treats Grok only as an optional event extractor, uses Jupiter Swap API V2, and requires backtest, walk-forward, shadow, signer, and capped-wallet promotion gates before live capital. This memo remains supporting background and incident research.
+> **Implementation update — 25 October 2026:** The build sequence in this research memo is superseded by the repository's [canonical implementation plan](../PLAN.md). The replacement plan is provider-neutral, trades SOL against vetted Solana ecosystem tokens with staked SOL as the benchmark, treats Grok only as an optional event extractor, uses Jupiter Swap API V2, and requires pre-registered kill tests plus backtest, walk-forward, shadow, signer, and capped-wallet promotion gates before live capital. This memo remains supporting background and incident research.
 
 **Research date:** 25 October 2026  
 **Question:** What should an experienced crypto trader build if they want an AI bot on Solana DEXes, using Grok, and which true stories actually happened?

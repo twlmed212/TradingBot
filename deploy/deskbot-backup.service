@@ -1,0 +1,12 @@
+[Unit]
+Description=deskbot daily SQLite copies (H9 and listings) before the EBS snapshot
+
+[Service]
+Type=oneshot
+User=deskbot
+ExecStart=/usr/bin/python3 /opt/deskbot/ops/backup_sqlite.py
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/deskbot/backups
+PrivateTmp=true

@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 from datetime import timedelta
 
-import httpx
+try:
+    import httpx
+except ImportError:
+    httpx = None
 
 from .ledger import utcnow
 
@@ -90,18 +93,23 @@ def extract_output_text(body: dict) -> str:
 
 class Grok:
     def __init__(self, api_key: str, model: str, temperature: float = 0.2, x_search: bool = False,
-                 x_handles: tuple[str, ...] = (), client: httpx.Client | None = None):
+                 x_handles: tuple[str, ...] = (), client: object = None):
         if not api_key:
             raise ValueError("XAI_API_KEY is not set")
         self.model = model
         self.temperature = temperature
         self.x_search = x_search
         self.x_handles = x_handles
-        self.http = client or httpx.Client(
-            base_url="https://api.x.ai/v1",
-            timeout=180.0,
-            headers={"Authorization": f"Bearer {api_key}"},
-        )
+        if client is None:
+            if httpx is None:
+                raise RuntimeError("httpx is required for live Grok calls: pip install httpx")
+            self.http = httpx.Client(
+                base_url="https://api.x.ai/v1",
+                timeout=180.0,
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+        else:
+            self.http = client
 
     def _tools(self) -> list[dict]:
         if not self.x_search:

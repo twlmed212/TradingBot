@@ -1,4 +1,13 @@
-"""One desk cycle: gather data -> screen -> ask Grok -> risk gate -> human/rule approval -> paper fill via Jupiter quote."""
+"""One desk cycle, in this order:
+
+1. gather prices and safety facts
+2. protective exits (take-profit, stop-loss, time stop, safety breach) — always, even when halted or the model is down
+3. halts (kill switch flattens everything to the quote token; other halts only stop new entries)
+4. ask the proposer, risk-gate its proposals, get approval, paper-fill via a Jupiter quote
+
+All sizes are in USD; amounts sent to Jupiter and cash in the ledger are in quote-token units (SOL when SOL is the
+quote), converted at the live quote price.
+"""
 
 from __future__ import annotations
 
@@ -42,11 +51,15 @@ class TradeTicket:
 Approver = Callable[[TradeTicket], tuple[bool, str]]
 
 
+STABLE_QUOTES = {"USDC", "USDT"}
+
+
 @dataclass
 class MarketData:
     info: dict[str, dict]
     prices: dict[str, float]
     safety: dict[str, SafetyReport]
+    quote_px: float = 1.0  # USD price of the quote token
 
 
 @dataclass
@@ -75,17 +88,25 @@ class Desk:
     # --- data ---------------------------------------------------------------
 
     def gather(self) -> MarketData:
-        mints = [t.mint for t in self.s.tokens]
+        q = self.s.quote
+        mints = [t.mint for t in self.s.tokens] + [q.mint]
         info = self.jupiter.token_info(mints)
         missing = [t.symbol for t in self.s.tokens if t.mint not in info]
         if missing:
             raise RuntimeError(f"Jupiter returned no data for {', '.join(missing)}")
         prices = {m: float(i["usdPrice"]) for m, i in info.items() if i.get("usdPrice")}
+        quote_px = prices.pop(q.mint, None)
+        if quote_px is None:
+            if q.symbol not in STABLE_QUOTES:
+                raise RuntimeError(f"no USD price for quote token {q.symbol}")
+            quote_px = 1.0
+        self.ledger.ensure_starting_cash_quote(quote_px)
+        self.ledger.set_state("last_quote_price_usd", repr(quote_px))
         safety = {t.mint: screen(t, self.rpc.mint_info(t.mint), info[t.mint], self.s.risk) for t in self.s.tokens}
-        return MarketData(info=info, prices=prices, safety=safety)
+        return MarketData(info=info, prices=prices, safety=safety, quote_px=quote_px)
 
     def build_packet(self, md: MarketData) -> dict:
-        book = self.ledger.book()
+        book = self.ledger.book(md.quote_px)
         lim = self.s.risk
         tokens = []
         for t in self.s.tokens:
@@ -121,10 +142,13 @@ class Desk:
             "now_utc": utcnow().isoformat(timespec="seconds"),
             "mode": "paper",
             "quote_asset": self.s.quote.symbol,
+            "quote_price_usd": md.quote_px,
             "tokens": tokens,
             "portfolio": {
+                "cash_quote": round(book.cash_quote, 6),
                 "cash_usd": round(book.cash_usd, 2),
                 "equity_usd": round(book.equity(md.prices), 2),
+                "equity_quote": round(book.equity_quote(md.prices), 6),
                 "realized_pnl_usd": round(book.realized_pnl_usd, 2),
                 "positions": positions,
             },
@@ -145,28 +169,72 @@ class Desk:
 
     # --- execution (paper) --------------------------------------------------
 
-    def _quote(self, token: Token, side: str, size_usd: float, price: float) -> Quote:
+    def _quote(self, token: Token, side: str, size_usd: float, price: float, quote_px: float) -> Quote:
+        """Buy: spend `size_usd` worth of the quote token. Sell: `size_usd` worth of the token, capped at the position."""
         q = self.s.quote
         slip = self.s.risk.slippage_bps
         if side == "buy":
-            return self.jupiter.quote(q.mint, token.mint, int(size_usd * 10**q.decimals), slip)
-        pos = self.ledger.book().positions[token.mint]
+            return self.jupiter.quote(q.mint, token.mint, int(size_usd / quote_px * 10**q.decimals), slip)
+        pos = self.ledger.book(quote_px).positions[token.mint]
         qty = min(size_usd / price, pos.qty)
-        return self.jupiter.quote(token.mint, q.mint, int(qty * 10**token.decimals), slip)
+        return self._quote_sell_qty(token, qty)
 
-    def _paper_fill(self, ticket: TradeTicket) -> str:
-        """Fill at the quoted output, haircut by half the slippage tolerance to stay on the conservative side."""
+    def _quote_sell_qty(self, token: Token, qty: float) -> Quote:
+        return self.jupiter.quote(token.mint, self.s.quote.mint, int(qty * 10**token.decimals), self.s.risk.slippage_bps)
+
+    def _paper_fill(self, ticket: TradeTicket, quote_px: float) -> str:
+        """Fill at the quoted output, haircut by half the slippage tolerance to stay on the conservative side.
+        Records the quote-token amount that moved and its USD value at the live quote price."""
         qt, tk, quote = self.s.quote, ticket.token, ticket.quote
         haircut = 1 - (self.s.risk.slippage_bps / 2) / 10_000
         if ticket.side == "buy":
-            usd = quote.in_amount / 10**qt.decimals
+            quote_amount = quote.in_amount / 10**qt.decimals
             qty = quote.out_amount / 10**tk.decimals * haircut
         else:
             qty = quote.in_amount / 10**tk.decimals
-            usd = quote.out_amount / 10**qt.decimals * haircut
+            quote_amount = quote.out_amount / 10**qt.decimals * haircut
+        usd = quote_amount * quote_px
         self.ledger.record_fill(ticket.proposal_id, tk.mint, tk.symbol, ticket.side, qty, usd,
-                                self.s.network_fee_usd, quote.price_impact_bps)
-        return f"PAPER {ticket.side.upper()} {qty:,.6g} {tk.symbol} for ${usd:,.2f} (impact {quote.price_impact_bps:.1f} bps)"
+                                self.s.network_fee_usd, quote.price_impact_bps, quote_amount=quote_amount,
+                                quote_price_usd=quote_px, fee_quote=self.s.network_fee_usd / quote_px)
+        return (f"PAPER {ticket.side.upper()} {qty:,.6g} {tk.symbol} for {quote_amount:,.6g} {qt.symbol} "
+                f"(${usd:,.2f}, impact {quote.price_impact_bps:.1f} bps)")
+
+    def _exit_ticket(self, token: Token, qty: float, usd: float, reason: str, quote: Quote) -> TradeTicket:
+        return TradeTicket(proposal_id=0, token=token, side="sell", size_usd=usd, confidence=1.0, edge_bps=0.0,
+                           costs_bps=0.0, thesis=f"Protective exit: {reason}", invalidation="", notes=[reason], quote=quote)
+
+    def _protective_exits(self, md: MarketData, flatten_reason: str | None = None) -> list[str]:
+        """Sell positions that hit take-profit / stop-loss / time stop or now fail the safety screen.
+        With `flatten_reason` (kill switch), sell everything. Measured in quote-token terms (the plan's numeraire)."""
+        log: list[str] = []
+        now_dt = utcnow()
+        for mint, pos in list(self.ledger.book(md.quote_px).positions.items()):
+            token = self.s.token(mint)
+            if not token or pos.qty <= 0:
+                continue
+            price = md.prices.get(mint, 0.0)
+            reason = flatten_reason
+            if reason is None:
+                if price <= 0:
+                    continue
+                should_exit, reason = risk.check_position_exit(
+                    pos.qty, pos.avg_price_quote, price / md.quote_px, self.ledger.last_fill_ts(mint), now_dt, self.s.risk)
+                safety_rep = md.safety.get(mint)
+                if not should_exit and safety_rep and not safety_rep.ok:
+                    should_exit, reason = True, f"safety screen breached: {'; '.join(safety_rep.failures)}"
+                if not should_exit:
+                    continue
+            try:
+                quote = self._quote_sell_qty(token, pos.qty)
+                log.append(f"PROTECTIVE EXIT {token.symbol}: {reason}")
+                log.append(self._paper_fill(self._exit_ticket(token, pos.qty, pos.qty * price, reason, quote), md.quote_px))
+            except Exception as e:
+                log.append(f"PROTECTIVE EXIT ERROR for {token.symbol}: {e}")
+        return log
+
+    def _kill_switch_on(self) -> bool:
+        return (self.workdir / self.s.risk.kill_switch_file).exists()
 
     # --- cycle --------------------------------------------------------------
 
@@ -179,70 +247,48 @@ class Desk:
         try:
             md = self.gather()
         except Exception as e:  # network, RPC, Jupiter
-            return self._error(f"market data failed: {e}")
+            result = self._error(f"market data failed: {e}")
+            if self._kill_switch_on():
+                # No fresh prices, but the kill switch must still flatten: sell by quantity, value at the last quote price.
+                last_px = float(self.ledger.get_state("last_quote_price_usd", "0") or 0) or 1.0
+                result.log += self._protective_exits(MarketData({}, {}, {}, last_px), flatten_reason="kill switch (no fresh prices)")
+            return result
 
-        book = self.ledger.book()
-        equity = book.equity(md.prices)
-        day_open = self.ledger.day_open_equity()
-        self.ledger.snapshot_equity(equity, book.cash_usd)
-        halt = risk.global_halt(self.s.risk, self.workdir, equity, day_open,
+        result = CycleResult(status="ok")
+        # 1. Protective exits always run first: no halt, model outage or entry throttle may block risk reduction.
+        result.log += self._protective_exits(md)
+
+        book = self.ledger.book(md.quote_px)
+        equity_q = book.equity_quote(md.prices)
+        self.ledger.snapshot_equity(book.equity(md.prices), book.cash_usd, equity_q)
+
+        # 2. Halts. Losses are measured in quote terms (vs holding the quote token), valued at the live quote price.
+        day_open_q = self.ledger.day_open_equity()
+        halt = risk.global_halt(self.s.risk, self.workdir, equity_q * md.quote_px,
+                                day_open_q * md.quote_px if day_open_q is not None else None,
                                 int(self.ledger.get_state("consecutive_errors", "0")))
         if halt:
-            return CycleResult(status="halted", message=halt)
+            if self._kill_switch_on():
+                result.log += self._protective_exits(md, flatten_reason="kill switch")
+            return CycleResult(status="halted", message=halt, log=result.log)
         if self.proposer is None:
-            return CycleResult(status="error", message="no proposer configured")
+            return CycleResult(status="error", message="no proposer configured", log=result.log)
 
+        # 3. Ask the proposer.
         packet = self.build_packet(md)
         started = time.monotonic()
         try:
             opinion, raw = self.proposer.propose(packet)
         except Exception as e:
             self.ledger.record_decision(self.proposer.model, packet, None, str(e), time.monotonic() - started)
-            return self._error(f"model call failed: {e}")
+            err = self._error(f"model call failed: {e}")
+            err.log = result.log + err.log
+            return err
         decision_id = self.ledger.record_decision(self.proposer.model, packet, raw, None, time.monotonic() - started)
         self.ledger.set_state("consecutive_errors", "0")
+        result.market_view = opinion["market_view"]
 
-        result = CycleResult(status="ok", market_view=opinion["market_view"])
-
-        # 1. Automated Protective Exits (Bypasses entry throttles and halts)
-        now_dt = utcnow()
-        for mint, pos in list(book.positions.items()):
-            price = md.prices.get(mint, 0.0)
-            token = self.s.token(mint)
-            if not token or price <= 0 or pos.qty <= 0:
-                continue
-            entry_ts = self.ledger.last_fill_ts(mint)
-            should_exit, exit_reason = risk.check_position_exit(
-                pos.qty, pos.avg_price, price, entry_ts, now_dt, self.s.risk
-            )
-            safety_rep = md.safety.get(mint)
-            if not should_exit and safety_rep and not safety_rep.ok:
-                should_exit = True
-                exit_reason = f"safety screen breached: {'; '.join(safety_rep.failures)}"
-
-            if should_exit:
-                try:
-                    exit_size_usd = pos.qty * price
-                    quote = self._quote(token, "sell", exit_size_usd, price)
-                    ticket = TradeTicket(
-                        proposal_id=0,
-                        token=token,
-                        side="sell",
-                        size_usd=exit_size_usd,
-                        confidence=1.0,
-                        edge_bps=0.0,
-                        costs_bps=0.0,
-                        thesis=f"Protective Exit: {exit_reason}",
-                        invalidation="",
-                        notes=[exit_reason],
-                        quote=quote,
-                    )
-                    result.log.append(f"PROTECTIVE EXIT {token.symbol}: {exit_reason}")
-                    result.log.append(self._paper_fill(ticket))
-                except Exception as e:
-                    result.log.append(f"PROTECTIVE EXIT ERROR for {token.symbol}: {e}")
-
-        # 2. Evaluate New Proposals
+        # 4. Evaluate new proposals.
         if not opinion["proposals"]:
             result.log.append("No proposals (hold).")
         safety_ok = {m: r.ok for m, r in md.safety.items()}
@@ -250,21 +296,20 @@ class Desk:
             token = self.s.token(p["mint"])
             price = md.prices.get(p["mint"])
             verdict = risk.check_proposal(
-                p, self.s.risk, self.ledger.book(), md.prices, safety_ok,
+                p, self.s.risk, self.ledger.book(md.quote_px), md.prices, safety_ok,
                 trades_used_today=self.ledger.fills_today(), last_fill_at=self.ledger.last_fill_ts(p["mint"]),
             )
             quote = None
             costs = 0.0
             if verdict.ok:
                 try:
-                    quote = self._quote(token, p["side"], verdict.size_usd, price)
-                    # Anti-sandwich verification
+                    quote = self._quote(token, p["side"], verdict.size_usd, price, md.quote_px)
                     sw_err = risk.check_anti_sandwich(quote.price_impact_bps, self.s.risk.slippage_bps, self.s.risk)
                     if sw_err:
                         verdict.reasons.append(sw_err)
                     costs = risk.cost_bps(quote.price_impact_bps, self.s.risk.slippage_bps, self.s.network_fee_usd, verdict.size_usd)
                     reason = risk.check_costs(p["expected_edge_bps"], costs, self.s.risk.edge_cost_multiple)
-                    if reason:
+                    if reason and p["side"] == "buy":  # never refuse an exit for being "too expensive"
                         verdict.reasons.append(reason)
                 except Exception as e:
                     verdict.reasons.append(f"quote failed: {e}")
@@ -281,5 +326,5 @@ class Desk:
             if not approved:
                 result.log.append(f"DECLINED {label}" + (f": {note}" if note else ""))
                 continue
-            result.log.append(self._paper_fill(ticket))
+            result.log.append(self._paper_fill(ticket, md.quote_px))
         return result

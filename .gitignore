@@ -5,3 +5,6 @@ __pycache__/
 *.sqlite3
 STOP
 data/
+console/.venv/
+console/web/node_modules/
+console/web/dist/

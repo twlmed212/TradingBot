@@ -1,5 +1,6 @@
 # Pre-registration: SOL/USDC dual-horizon trend kill test
 
+**Hypothesis:** H1  
 **Registered:** 25 October 2026, before any run of `research/trend_killtest.py`  
 **Status:** kill test, not a promotion gate. Passing only justifies building Milestones 0–2 of [PLAN.md](../../PLAN.md); it is not evidence for G2.  
 **Trials counted against this hypothesis:** 9 parameter variants (grid below). Any later change is a new registration.

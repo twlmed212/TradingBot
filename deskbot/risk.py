@@ -50,12 +50,14 @@ def check_proposal(
 
     if price is None or price <= 0:
         reasons.append("no live price")
-    if trades_used_today >= limits.max_trades_per_day:
-        reasons.append(f"daily trade cap {limits.max_trades_per_day} reached")
-    if p["confidence"] < limits.min_confidence:
-        reasons.append(f"confidence {p['confidence']:.2f} < {limits.min_confidence:.2f}")
-    if last_fill_at is not None and now - last_fill_at < timedelta(minutes=limits.mint_cooldown_minutes):
-        reasons.append(f"mint cooldown ({limits.mint_cooldown_minutes} min) active")
+    # Entry throttles apply to buys only: a sell reduces risk and must never be blocked by them (PLAN.md risk layer).
+    if side == "buy":
+        if trades_used_today >= limits.max_trades_per_day:
+            reasons.append(f"daily trade cap {limits.max_trades_per_day} reached")
+        if p["confidence"] < limits.min_confidence:
+            reasons.append(f"confidence {p['confidence']:.2f} < {limits.min_confidence:.2f}")
+        if last_fill_at is not None and now - last_fill_at < timedelta(minutes=limits.mint_cooldown_minutes):
+            reasons.append(f"mint cooldown ({limits.mint_cooldown_minutes} min) active")
     if size <= 0:
         reasons.append("non-positive size")
 
@@ -82,7 +84,9 @@ def check_proposal(
             notes.append(f"size clipped ${size:.2f} -> ${held_usd:.2f} (whole position)")
             size = held_usd
 
-    if size < limits.min_trade_usd and "non-positive size" not in reasons:
+    # A sell may be smaller than the minimum when it closes the whole remaining position.
+    closes_position = side == "sell" and pos is not None and price and abs(size - pos.qty * price) < 1e-9
+    if size < limits.min_trade_usd and "non-positive size" not in reasons and not closes_position:
         reasons.append(f"size ${size:.2f} below minimum ${limits.min_trade_usd:.2f}")
 
     return Verdict(ok=not reasons, size_usd=round(size, 2), reasons=reasons, notes=notes)

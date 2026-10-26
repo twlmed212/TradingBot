@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the deskbot announcement collector every 10 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+RandomizedDelaySec=30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

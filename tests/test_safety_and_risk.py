@@ -1,7 +1,6 @@
-"""Unit tests for honeypot safety screening, anti-sandwich checks, and risk engine rules."""
-
 from datetime import datetime, timezone, timedelta
-import pytest
+import tempfile
+from pathlib import Path
 
 from deskbot.config import RiskLimits, Token
 from deskbot.ledger import Book, Ledger, Position
@@ -175,7 +174,12 @@ def test_protective_exits():
     assert "max holding time exceeded" in reason
 
 
-def test_ledger_accounting(tmp_path):
+def test_ledger_accounting(tmp_path=None):
+    if tmp_path is None:
+        with tempfile.TemporaryDirectory() as td:
+            test_ledger_accounting(Path(td))
+        return
+
     db_file = tmp_path / "test_ledger.sqlite3"
     ledger = Ledger(str(db_file), starting_cash_usd=100.0)
 

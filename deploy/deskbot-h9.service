@@ -1,0 +1,21 @@
+[Unit]
+Description=deskbot H9 forward paper test (public Hyperliquid prices; no orders, no keys)
+After=network-online.target
+Wants=network-online.target
+# a failed run (for example Hyperliquid's API down) retries every 4 minutes, so the hour is not lost
+StartLimitIntervalSec=3600
+StartLimitBurst=12
+
+[Service]
+Type=oneshot
+User=deskbot
+WorkingDirectory=/opt/deskbot
+ExecStart=/usr/bin/python3 research/h9_paper.py
+TimeoutStartSec=900
+Restart=on-failure
+RestartSec=240
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/deskbot/data
+PrivateTmp=true

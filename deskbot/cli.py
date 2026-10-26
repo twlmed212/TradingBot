@@ -41,29 +41,42 @@ def auto_approver(ticket) -> tuple[bool, str]:
 def build_desk(config_path: Path, workdir: Path) -> Desk:
     settings = load_settings(config_path)
     ledger = Ledger(str(workdir / settings.db_path), settings.starting_cash_usd)
-    jupiter = Jupiter(settings.jupiter_base_url, settings.jupiter_api_key)
-    rpc = SolanaRpc(settings.rpc_url)
+    try:
+        jupiter = Jupiter(settings.jupiter_base_url, settings.jupiter_api_key)
+    except Exception:
+        jupiter = None
+    try:
+        rpc = SolanaRpc(settings.rpc_url)
+    except Exception:
+        rpc = None
     proposer = None
     if settings.xai_api_key:
-        proposer = Grok(
-            api_key=settings.xai_api_key,
-            model=settings.xai_model,
-            temperature=settings.temperature,
-            x_search=settings.x_search,
-            x_handles=settings.x_handles,
-        )
+        try:
+            proposer = Grok(
+                api_key=settings.xai_api_key,
+                model=settings.xai_model,
+                temperature=settings.temperature,
+                x_search=settings.x_search,
+                x_handles=settings.x_handles,
+            )
+        except Exception:
+            proposer = None
     approver = terminal_approver if settings.approve == "manual" else auto_approver
     return Desk(settings, ledger, jupiter, rpc, proposer, approver, workdir)
 
 
 def cmd_status(desk: Desk) -> int:
-    book = desk.ledger.book()
+    # Offline view: amounts in quote units are exact; USD uses the last quote price the bot saw (if any).
+    last_px = float(desk.ledger.get_state("last_quote_price_usd", "0") or 0)
+    book = desk.ledger.book(last_px or 1.0)
+    q = desk.s.quote.symbol
+    usd = lambda v: f" (≈ ${v * last_px:,.2f})" if last_px else ""  # noqa: E731
     print("=" * 60)
-    print("DESKBOT PORTFOLIO STATUS")
-    print(f"Quote Currency: {desk.s.quote.symbol}")
-    print(f"Cash Available: {book.cash_usd:,.2f} {desk.s.quote.symbol}")
-    print(f"Realized PnL:   {book.realized_pnl_usd:+,.2f} {desk.s.quote.symbol}")
-    print(f"Total Fees:     {book.fees_usd:,.2f} {desk.s.quote.symbol}")
+    print("DESKBOT PORTFOLIO STATUS (paper)")
+    print(f"Quote Currency: {q}" + (f" at ${last_px:,.2f} (last seen)" if last_px else ""))
+    print(f"Cash Available: {book.cash_quote:,.6g} {q}{usd(book.cash_quote)}")
+    print(f"Realized PnL:   {book.realized_pnl_quote:+,.6g} {q}  /  {book.realized_pnl_usd:+,.2f} USD at fill prices")
+    print(f"Total Fees:     ${book.fees_usd:,.2f}")
     print(f"Fills Today:    {desk.ledger.fills_today()} / {desk.s.risk.max_trades_per_day}")
     print("-" * 60)
     if not book.positions:
@@ -71,12 +84,15 @@ def cmd_status(desk: Desk) -> int:
     else:
         print("Open Positions:")
         for mint, pos in book.positions.items():
-            print(f"  • {pos.symbol}: {pos.qty:,.4g} tokens (cost basis {pos.cost_usd:,.2f})")
+            print(f"  • {pos.symbol}: {pos.qty:,.4g} tokens (cost basis {pos.cost_quote:,.6g} {q} / ${pos.cost_usd:,.2f})")
     print("=" * 60)
     return 0
 
 
 def cmd_screen(desk: Desk, mint: str) -> int:
+    if desk.rpc is None or desk.jupiter is None:
+        print("❌ Live network calls require httpx. Please run: pip install httpx", file=sys.stderr)
+        return 1
     print(f"\nScreening token mint: {mint} ...")
     token = desk.s.token(mint) or Token(symbol="SCAN", mint=mint, decimals=9, trusted_authorities=False)
     try:
@@ -109,6 +125,9 @@ def cmd_screen(desk: Desk, mint: str) -> int:
 
 
 def cmd_cycle(desk: Desk) -> int:
+    if desk.rpc is None or desk.jupiter is None:
+        print("❌ Live trading cycle requires httpx. Please run: pip install httpx", file=sys.stderr)
+        return 1
     print("\nStarting trading cycle...")
     res = desk.cycle()
     print(f"Cycle Status: {res.status.upper()}")
