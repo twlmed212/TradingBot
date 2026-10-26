@@ -4,7 +4,7 @@ Read this first, then `README.md`, `docs/PRODUCT.md` and `docs/OPERATIONS.md`. T
 
 ## 1. What this project is
 
-A **non-custodial Solana swap tool** (Telegram bot + signing page) that earns a per-trade fee through Jupiter's Referral Program. The owner chose this on 26 Oct 2026 after the research phase showed no tradable edge (`docs/RESEARCH_SUMMARY.md`). The research code lives only on branch `archive/2026-10-26-snapshot`.
+A **non-custodial Solana swap tool** (Telegram bot + signing page) that earns a per-trade fee through Jupiter's Referral Program. The owner chose this on 26 Oct 2026 after the research phase showed no tradable edge. Research code, plans and reports live only on branch `archive/2026-10-26-snapshot`; do not bring old plans back into `main`.
 
 ## 2. Current state (26 Oct 2026)
 
@@ -36,7 +36,7 @@ A **non-custodial Solana swap tool** (Telegram bot + signing page) that earns a 
 | `swapbot/tests/` | Product tests (conftest adds the repo root to `sys.path`) |
 | `server/recorder/` | Jupiter quote/cost recorder (systemd `deskbot-recorder`) |
 | `server/research/announcements.py` | Binance/Upbit listing collector (timer every 10 min); source for listing alerts |
-| `server/research/h9_*.py`, `server/research/registry/` | H9 forward paper test and its verdict code; do not change rules or code before 31 Jan 2027 (bug fixes only, logged in its registry) |
+| `server/research/h9_*.py` | H9 forward paper test and its verdict code, running on the server until 31 Jan 2027; do not change them (its rules document is on the archive branch) |
 | `server/console/` | Watch-only dashboard (FastAPI + React), 127.0.0.1:8787 on the host |
 | `server/deploy/` | `bootstrap.sh`, systemd units, `deploy_console.sh`, `backup_sqlite.py` |
 | `server/tests/` | H9 verdict + console agreement tests (conftest adds `server/` to `sys.path`) |

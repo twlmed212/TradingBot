@@ -1,8 +1,14 @@
 # Product plan: non-custodial Solana swap bot that earns a fee per trade
 
-**Status:** owner chose this route on 26 Oct 2026, after 8 strategy tests and the arbitrage measurement (see `docs/RESEARCH_SUMMARY.md`) showed that DEX profit goes to speed players and fee takers.  
+**Status:** owner chose this route on 26 Oct 2026, after 8 strategy tests and an on-chain arbitrage measurement showed that DEX profit goes to speed players and fee takers (details on branch `archive/2026-10-26-snapshot`).  
 **Owner decisions (26 Oct 2026):** first users come from **marketing from zero** (no existing audience), so growth features (a referral reward for users who invite others, shareable trade links) are part of milestone 4. Production secrets (Jupiter API key, Telegram bot token) go in **AWS SSM Parameter Store**; the owner enters the values, Claude never handles them.  
 **Revenue model:** every swap made through our tool carries an integrator fee through Jupiter's Referral Program. We earn whether users win or lose; no trading capital, no price predictions.
+
+## Why this works when trading did not
+
+- The average Solana token loses value against SOL, so heavy traders mostly lose; we don't promise profits or sell signals.
+- Arbitrage is a same-block speed race: about $56k/day across all of Solana, mostly taken by a few players.
+- Fee takers win reliably: trading bots charge about 1% per trade (Axiom, Photon, Trojan, BONKbot have each earned $100M+), and on-chain we saw a swap service charging $0.10 per swap.
 
 ## How the money works
 
@@ -17,7 +23,7 @@ A Telegram bot plus a signing page:
 
 1. `/buy <token> <amount>` and `/sell`: the bot shows the quote, our measured round-trip cost, the fee, and token safety checks (mint/freeze authority, liquidity, holder concentration).
 2. A **Sign** button opens our page inside the user's wallet app (Phantom/Solflare in-app browser). The page builds a fresh Jupiter order for the user's wallet, the wallet **signs only**, and our server submits it with `/swap/v2/execute` (required for Jupiter's RFQ routes). The bot confirms the result.
-3. Alerts: Binance/Upbit listing announcements for Solana tokens (our existing collector), with a one-tap buy link. No profit promises (our H3a test found no reliable edge).
+3. Alerts: Binance/Upbit listing announcements for Solana tokens (our existing collector), with a one-tap buy link. No profit promises (our listing test found no reliable edge).
 
 **Non-custodial:** we never hold keys or funds and never ask for a seed phrase. That is a selling point against custodial bots, which have been hacked before.
 

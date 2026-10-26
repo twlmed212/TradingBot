@@ -1,4 +1,4 @@
-"""Forward Jupiter quote recorder (PLAN.md Milestone 1).
+"""Forward Jupiter quote recorder: live round-trip costs by token and size.
 
 Every interval it probes Jupiter Swap API V2 `/order` (quote only: no taker, so no transaction is built) for
 SOL->USDC and USDC->SOL at fixed USD notionals, plus Jupiter Price V3 and Binance spot as reference prices.

@@ -8,7 +8,7 @@ import { EquityChart } from "./components/EquityChart";
 import { Sparkline } from "./components/Sparkline";
 import { Status, type Level } from "./components/Status";
 
-const COST_LIMIT_BPS = 50; // PLAN.md universe rule: round trip at the intended size ≤ 50 bps
+const COST_LIMIT_BPS = 50; // a round trip above 50 bps at the intended size is flagged as too costly
 
 function Card(props: { id: string; title: string; sub?: string; actions?: React.ReactNode; stale?: boolean; children: React.ReactNode }) {
   return (
@@ -394,7 +394,7 @@ export function Listings({ announcements }: { announcements: Poll<Announcements>
     <Card
       id="listings"
       title="Exchange listings"
-      sub="Binance and Upbit announcements · parsed by rules · input for the listing test (H3a)"
+      sub="Binance and Upbit announcements · parsed by rules · source for listing alerts"
       stale={announcements.refreshing && !!d}
       actions={
         <div className="seg" role="group" aria-label="Exchange">

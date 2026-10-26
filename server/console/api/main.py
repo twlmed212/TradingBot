@@ -1,4 +1,4 @@
-"""deskbot console API — read-only, watch-only (PLAN.md Milestone R).
+"""deskbot console API — read-only, watch-only dashboard for the EC2 services.
 
 Serves JSON under /api and the built React app under /. It never writes to any data file, never holds keys,
 and is bound to 127.0.0.1 on the server; it is reached only through the Session Manager SSH tunnel.
@@ -40,7 +40,7 @@ WEB_DIST = Path(os.environ.get("DESKBOT_WEB_DIST", Path(__file__).resolve().pare
 SOL = "So11111111111111111111111111111111111111112"
 USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 
-# PLAN.md stop rule: fixed in advance, not moved after seeing results.
+# Research stop rule (archived plan): fixed in advance.
 STOP_RULE_DEADLINE = date(2027, 1, 31)
 STOP_RULE_MAX_HYPOTHESES = 6
 BASELINE_HYPOTHESES = {"H1", "H2"}

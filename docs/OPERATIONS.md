@@ -92,12 +92,11 @@ Deploy changes to the console, the listings collector, or the research files:
 bash server/deploy/deploy_console.sh
 ```
 
-The listings collector (`deskbot-announcements.timer`) runs every 10 minutes. Upbit's announcement site blocks AWS IPs, so on the server Upbit listings come from Upbit's official market list (new and removed markets, warning flags); its older notice history was copied from the Mac.
+The listings collector (`deskbot-announcements.timer`) runs every 10 minutes. Upbit's announcement site blocks AWS IPs, so on the server Upbit listings come from Upbit's official market list (new and removed markets, warning flags).
 
 ## Notes
 
 - Jupiter's keyless API rate-limits bursts from this IP; the recorder pauses 1 s between requests (`--pause`), so a cycle takes about 30 s.
-- The Mac recorder was stopped on 25 Oct 2026 at 18:15 UTC; its data stays in `data/quotes.sqlite3` on the Mac as an archive.
 - The Free plan credit ($100) expires on 25 April 2027; the project must be upgraded to the paid plan before then to keep the server.
 
 ## H9 forward paper test
@@ -119,7 +118,7 @@ ssh tradingbot 'cd /opt/deskbot && sudo -u deskbot python3 research/h9_verdict.p
 ## Backups and restore
 
 - **What exists:** a clean daily copy of `h9_paper.sqlite3` and `announcements.sqlite3` in `/opt/deskbot/backups/` (03:15 UTC, `server/deploy/backup_sqlite.py`), then a snapshot of the whole disk at 03:30 UTC (7 kept). `quotes.sqlite3` is only in the snapshots.
-- **Restore a file on the same server** (for example a damaged H9 database): stop the timer, copy the backup over, start the timer, and disclose the restore in the H9 registry (any hours between the copy and the restore are lost runs).
+- **Restore a file on the same server** (for example a damaged H9 database): stop the timer, copy the backup over, start the timer (any hours between the copy and the restore are lost runs).
 
 ```bash
 ssh tradingbot 'sudo systemctl stop deskbot-h9.timer && sudo -u deskbot cp /opt/deskbot/backups/h9_paper-YYYY-MM-DD.sqlite3 /opt/deskbot/data/h9_paper.sqlite3 && sudo systemctl start deskbot-h9.timer'

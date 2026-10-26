@@ -11,6 +11,7 @@ __pycache__/
 # Node / builds
 node_modules/
 server/console/web/dist/
+*.tsbuildinfo
 swapbot/build/
 
 # data and databases (local and server copies)

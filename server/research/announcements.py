@@ -10,7 +10,7 @@ Sources:
   warning flag becomes an event. Works from the AWS server. Event time = when we first saw it.
 
 Each row keeps the source's own publish time, our first-seen time, the raw payload hash, and a deterministic
-parse (event type + tickers). Parsing clean first-party titles is rule-based on purpose (PLAN.md: parser first);
+parse (event type + tickers). Parsing clean first-party titles is rule-based on purpose (parser first);
 an LLM is only considered for messy text where it measurably beats this parser.
 """
 

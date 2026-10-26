@@ -2,7 +2,7 @@
 
 A **non-custodial** Solana swap tool (Telegram bot plus a signing page) that earns a **per-trade fee** through Jupiter's Referral Program. Users keep their own keys: our server builds the swap, the user's wallet signs it, and Jupiter executes it. We never hold funds or private keys.
 
-**Why this product:** our research (8 strategy tests plus an on-chain arbitrage measurement, see [docs/RESEARCH_SUMMARY.md](docs/RESEARCH_SUMMARY.md)) found that DEX money goes to speed players and fee takers, not to strategies we could run. A fee on every swap earns whether users win or lose.
+**Why this product:** earlier testing (8 trading strategies plus an on-chain arbitrage measurement) found that DEX money goes to speed players and fee takers, not to strategies we could run. A fee on every swap earns whether users win or lose.
 
 **Status (26 Oct 2026):** milestone 1 in progress: swap API and signing page. Plan and milestones: [docs/PRODUCT.md](docs/PRODUCT.md).
 
@@ -13,7 +13,7 @@ A **non-custodial** Solana swap tool (Telegram bot plus a signing page) that ear
 | `swapbot/` | **The product.** AWS Lambda app: swap API (`/api/order`, `/api/execute`), signing page (`static/`), Telegram bot (milestone 2). Tests in `swapbot/tests/` |
 | `server/` | Always-on EC2 services that feed the product: Jupiter quote/cost recorder (`recorder/`), Binance/Upbit listing collector (`research/announcements.py`), watch-only dashboard (`console/`), the still-running H9 paper test (`research/h9_*`), and the deploy scripts (`deploy/`) |
 | `tools/` | `check_env.py`: checks the keys in `.env` without printing them |
-| `docs/` | Product plan, operations (AWS server, SSH, backups), research summary |
+| `docs/` | Product plan and operations (AWS server, SSH, backups) |
 | `AGENTS.md` | Handoff for AI coding agents (Codex, Claude) |
 
 Research code, reports and the old Grok-bot scaffold are kept on the branch [`archive/2026-10-26-snapshot`](https://github.com/twlmed212/TradingBot/tree/archive/2026-10-26-snapshot).
