@@ -1,6 +1,6 @@
 # AGENTS.md — handoff for AI coding agents (Codex, Claude, others)
 
-Read `README.md` first (product, plan, rules). The parent folder's `../CLAUDE.md` holds the AWS project rules (single Region eu-north-1, say "project" not "account", saved guidance level MEDIUM).
+Read `README.md` first (product, plan, rules). `CLAUDE.md` (local, not committed) holds the AWS project rules (single Region eu-north-1, say "project" not "account", saved guidance level MEDIUM).
 
 ## Current state (26 Oct 2026)
 
@@ -24,6 +24,7 @@ Read `README.md` first (product, plan, rules). The parent folder's `../CLAUDE.md
 
 ## Environment (owner's Mac)
 
-- Repo root: `/Users/twlmed212/Desktop/MySpace/TradingBot/Untitled`. Python 3.14 system; test venv `.venv` (3.12, pytest): `.venv/bin/python -m pytest`.
+- Repo root: `/Users/twlmed212/Desktop/MySpace/TradingBot`. Python 3.14 system; test venv `.venv` (3.12, pytest): `.venv/bin/python -m pytest`.
 - Secrets: `.env` (git-ignored); template `.env.example`. Never print or commit key values.
 - AWS: profile `tradingbot`, Region eu-north-1, Free plan with $100 credit until 25 Apr 2027. Prefer the AWS MCP server for AWS API calls.
+- EC2 server `i-0c468a3d52d2e242f` (t4g.micro, Ubuntu 24.04) is kept but **empty**: the old bot's services, data and backups were removed on 26 Oct 2026. SSH: `ssh tradingbot` (through AWS Session Manager; no inbound ports). When the AWS login expires, the owner runs `aws login --region eu-north-1 --profile tradingbot`.

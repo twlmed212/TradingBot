@@ -1,6 +1,9 @@
 # secrets (never commit)
 .env
 
+# local tool settings
+.claude/
+
 # Python
 .venv/
 __pycache__/
