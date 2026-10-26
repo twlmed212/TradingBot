@@ -1,0 +1,9 @@
+{
+  "purpose": "Discovery and capture only; no source is yet approved as point-in-time H4 evidence.",
+  "sources": [
+    {"id": "jto-launch", "url": "https://www.jito.network/blog/announcing-jto-the-jito-governance-token/", "allowed_hosts": ["www.jito.network", "jito.network"]},
+    {"id": "pyth-distribution", "url": "https://docs.pyth.network/pyth-token/pyth-distribution", "allowed_hosts": ["docs.pyth.network"]},
+    {"id": "jup-audit-feb-2025", "url": "https://discuss.jup.ag/t/jup-community-audit-feb-2025/34764", "allowed_hosts": ["discuss.jup.ag"]},
+    {"id": "drift-launch", "url": "https://www.drift.trade/governance/introducing-the-drift-governance-token", "allowed_hosts": ["www.drift.trade", "drift.trade"]}
+  ]
+}
