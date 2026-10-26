@@ -1,10 +1,19 @@
+# secrets (never commit)
+.env
+
+# Python
 .venv/
 __pycache__/
 *.pyc
-.env
+.pytest_cache/
+.uv_cache/
+
+# Node / builds
+node_modules/
+server/console/web/dist/
+swapbot/build/
+
+# data and databases (local and server copies)
+data/
 *.sqlite3
 STOP
-data/
-console/.venv/
-console/web/node_modules/
-console/web/dist/
