@@ -4,16 +4,14 @@ Read `README.md` first (product, plan, rules). `CLAUDE.md` (local, not committed
 
 ## Current state (26 Oct 2026)
 
-- Fresh start: `main` contains only the swap-bot product. Research, old server code, plans and data were removed; history is on branch `archive/2026-10-26-snapshot`. Do not bring old plans or data back.
-- Milestone 1 in progress: `swapbot/app.py` is written (routes, input validation, Jupiter order/execute, security headers). Next: `swapbot/static/` (index.html, app.js, app.css), tests with a mocked Jupiter, a local dev server, then the AWS Lambda deployment.
+- Brand: **Kovaswap** (domains `kovaswap.com` / `.app` to be bought by the owner). We have no token; never imply one.
+
+- Mission 1 in progress: `swapbot/app.py` (swap API: routes, validation, Jupiter order/execute with our referral fee, security headers) is written; the web app is next.
 - Jupiter `GET /swap/v2/order` works keyless for development (checked 26 Oct). `JUPITER_API_KEY`, `REFERRAL_ACCOUNT` and `TELEGRAM_BOT_TOKEN` are not set yet (owner actions).
 
-## Next tasks (milestone 1)
+## Next tasks
 
-1. Signing page with the **Wallet Standard** (`standard:connect`, `solana:signTransaction`); no third-party scripts; the wallet only signs and the server calls `/swap/v2/execute`. Request transaction version 0.
-2. Tests for validation, routing and the referral parameters.
-3. Deploy one Python 3.13 arm64 Lambda with a function URL in eu-north-1. The IAM role may only write its logs and read `/swapbot/*` from SSM. Secrets go in SSM SecureString, entered by the owner.
-4. The owner makes a $1–2 test swap from their wallet; the fee shows in the referral account.
+Follow `ROADMAP.md`. Mission 1 = website (PWA) + Seeker app: web app with Wallet Standard and Solana Mobile's wallet library (bundled), swap API on AWS Lambda (`swapbot/app.py`), safety check, then wrap with Bubblewrap for the Solana dApp Store. Telegram comes in mission 3.
 
 ## Rules
 

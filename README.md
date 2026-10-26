@@ -1,6 +1,6 @@
-# Solana swap bot
+# Kovaswap
 
-A **non-custodial** Solana swap tool (Telegram bot plus a signing page) that earns a **fee on every swap** through Jupiter's Referral Program. Users keep their own keys: our server builds the swap, the user's wallet signs it, and Jupiter executes it. We never hold funds or private keys.
+A **non-custodial** Solana swap tool (website, Solana Seeker app, then a Telegram bot) that earns a **fee on every swap** through Jupiter's Referral Program. Users keep their own keys: our server builds the swap, the user's wallet signs it, and Jupiter executes it. We never hold funds or private keys.
 
 ## How it makes money
 
@@ -10,18 +10,7 @@ A **non-custodial** Solana swap tool (Telegram bot plus a signing page) that ear
 
 ## Plan
 
-| # | Milestone | Done when |
-|---|---|---|
-| 1 | Swap API + signing page on AWS Lambda | A $1–2 test swap from the owner's wallet lands and the fee reaches our referral account |
-| 2 | Telegram bot: wallet link, `/buy`, `/sell`, `/price`, safety checks | The owner trades end to end from Telegram |
-| 3 | Listing alerts with buy links, trade log, simple dashboard | Alerts arrive; volume and fees are visible |
-| 4 | Growth from zero: user referral rewards, shareable trade links, Solana groups and X | Weekly users, volume, fees |
-
-**Owner actions:**
-- Create a Jupiter API key (developer portal).
-- Create the referral account at [referral.jup.ag](https://referral.jup.ag/) with your own wallet, and share only its **public** address.
-- Create the Telegram bot with @BotFather (milestone 2).
-- Check local rules for running a swap interface that charges fees.
+The full plan (product map, missions, loyalty points, invites, Seeker perks): [ROADMAP.md](ROADMAP.md).
 
 ## Layout
 
